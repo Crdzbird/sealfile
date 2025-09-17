@@ -60,6 +60,11 @@ func (bp *BatchProcessor) LoadAllFiles(files []*SecureFile) []error {
 	})
 }
 
+// DeleteFile deletes a single file
+func DeleteFile(file *SecureFile) error {
+	return file.Delete()
+}
+
 // DeleteAllFiles deletes multiple files concurrently
 func (bp *BatchProcessor) DeleteAllFiles(files []*SecureFile) []error {
 	return bp.ProcessFiles(files, func(sf *SecureFile) error {
