@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="GoORMHelperCache">
+    <option name="schemaMapping">
+      <map>
+        <entry key="BatchProcessor">
+          <value>
+            <set>
+              <option value="file://$PROJECT_DIR$/batch_processor.go" />
+            </set>
+          </value>
+        </entry>
+        <entry key="Compressor">
+          <value>
+            <set>
+              <option value="file://$PROJECT_DIR$/compressor.go" />
+            </set>
+          </value>
+        </entry>
+        <entry key="Config">
+          <value>
+            <set>
+              <option value="file://$PROJECT_DIR$/config.go" />
+            </set>
+          </value>
+        </entry>
+        <entry key="Encryptor">
+          <value>
+            <set>
+              <option value="file://$PROJECT_DIR$/encryptor.go" />
+            </set>
+          </value>
+        </entry>
+        <entry key="FileManager">
+          <value>
+            <set>
+              <option value="file://$PROJECT_DIR$/file_manager.go" />
+            </set>
+          </value>
+        </entry>
+        <entry key="SecureFile">
+          <value>
+            <set>
+              <option value="file://$PROJECT_DIR$/secure_file.go" />
+            </set>
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="scannedPathMapping">
+      <map>
+        <entry key="file://$PROJECT_DIR$/../awesomeProject4/main.go">
+          <value>
+            <ScannedPath>
+              <option name="lastModified" value="1758100603872" />
+            </ScannedPath>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/batch_processor.go">
+          <value>
+            <ScannedPath>
+              <option name="lastModified" value="1758102435486" />
+              <option name="schema">
+                <list>
+                  <option value="BatchProcessor" />
+                </list>
+              </option>
+            </ScannedPath>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/compressor.go">
+          <value>
+            <ScannedPath>
+              <option name="lastModified" value="1758097633330" />
+              <option name="schema">
+                <list>
+                  <option value="Compressor" />
+                </list>
+              </option>
+            </ScannedPath>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/config.go">
+          <value>
+            <ScannedPath>
+              <option name="lastModified" value="1758097534335" />
+              <option name="schema">
+                <list>
+                  <option value="Config" />
+                </list>
+              </option>
+            </ScannedPath>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/encryptor.go">
+          <value>
+            <ScannedPath>
+              <option name="lastModified" value="1758097747531" />
+              <option name="schema">
+                <list>
+                  <option value="Encryptor" />
+                </list>
+              </option>
+            </ScannedPath>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/file_manager.go">
+          <value>
+            <ScannedPath>
+              <option name="lastModified" value="1758098085731" />
+              <option name="schema">
+                <list>
+                  <option value="FileManager" />
+                </list>
+              </option>
+            </ScannedPath>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/main.go">
+          <value>
+            <ScannedPath>
+              <option name="lastModified" value="1758097534376" />
+            </ScannedPath>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/secure_file.go">
+          <value>
+            <ScannedPath>
+              <option name="lastModified" value="1758097896728" />
+              <option name="schema">
+                <list>
+                  <option value="SecureFile" />
+                </list>
+              </option>
+            </ScannedPath>
+          </value>
+        </entry>
+        <entry key="file://$PROJECT_DIR$/utils.go">
+          <value>
+            <ScannedPath>
+              <option name="lastModified" value="1758102372604" />
+            </ScannedPath>
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="tableStructMapping">
+      <map>
+        <entry key="batch_processor" value="BatchProcessor" />
+        <entry key="compressor" value="Compressor" />
+        <entry key="config" value="Config" />
+        <entry key="encryptor" value="Encryptor" />
+        <entry key="file_manager" value="FileManager" />
+        <entry key="secure_file" value="SecureFile" />
+      </map>
+    </option>
+    <option name="lastTimeChecked" value="1758096781189" />
+  </component>
+</project>
