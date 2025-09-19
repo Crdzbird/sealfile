@@ -29,32 +29,18 @@ type CopyOptions struct {
 	CreateDirectories bool
 }
 
-// CopyOperation represents a file copy operation
-type CopyOperation struct {
-	SourcePath     string
-	SourceFilename string
-	DestPath       string
-	DestFilename   string
-	Options        CopyOptions
-}
-
-// CopyResult represents the result of a file copy operation
-type CopyResult struct {
-	SourcePath     string
-	SourceFilename string
-	DestPath       string
-	DestFilename   string
-	Success        bool
-	Error          error
-}
-
 // NewFileManager creates a new FileManager instance
 func NewFileManager(config *Config) (*FileManager, error) {
 	if config == nil {
 		config = DefaultConfig()
 	}
 
-	encryptor, err := NewEncryptor(config.EncryptionKey)
+	// Validate pepper is provided
+	if config.Pepper == "" {
+		return nil, fmt.Errorf("pepper is required for enhanced security")
+	}
+
+	encryptor, err := NewEncryptor(config.EncryptionKey, config.Pepper)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create encryptor: %w", err)
 	}
@@ -82,12 +68,6 @@ func (fm *FileManager) LoadSecureFileFromDisk(path, filename string) (*SecureFil
 	return sf, nil
 }
 
-// DeleteFile deletes a secure file from disk
-func (fm *FileManager) DeleteFile(path, filename string) error {
-	sf := fm.NewSecureFile(nil, path, filename)
-	return sf.Delete()
-}
-
 // SaveDataAsSecureFile saves raw data as a secure file
 func (fm *FileManager) SaveDataAsSecureFile(data []byte, path, filename string) (*SecureFile, error) {
 	sf := fm.NewSecureFile(data, path, filename)
@@ -95,24 +75,6 @@ func (fm *FileManager) SaveDataAsSecureFile(data []byte, path, filename string) 
 		return nil, err
 	}
 	return sf, nil
-}
-
-// GetConfig returns the current configuration
-func (fm *FileManager) GetConfig() *Config {
-	return fm.config
-}
-
-// UpdateConfig updates the configuration (creates new encryptor if key changed)
-func (fm *FileManager) UpdateConfig(config *Config) error {
-	if config.EncryptionKey != fm.config.EncryptionKey {
-		encryptor, err := NewEncryptor(config.EncryptionKey)
-		if err != nil {
-			return fmt.Errorf("failed to create new encryptor: %w", err)
-		}
-		fm.encryptor = encryptor
-	}
-	fm.config = config
-	return nil
 }
 
 // CreateMultipleEncryptedFiles creates multiple encrypted files from a list of file operations
@@ -283,4 +245,115 @@ func (fm *FileManager) BatchCopyFiles(copyOperations []CopyOperation, maxConcurr
 
 	wg.Wait()
 	return results
+}
+
+// GetConfig returns the current configuration
+func (fm *FileManager) GetConfig() *Config {
+	return fm.config
+}
+
+// UpdateConfig updates the configuration (creates new encryptor if key/pepper changed)
+func (fm *FileManager) UpdateConfig(config *Config) error {
+	// Validate pepper is provided
+	if config.Pepper == "" {
+		return fmt.Errorf("pepper is required for enhanced security")
+	}
+
+	// Check if we need to create a new encryptor
+	keyChanged := config.EncryptionKey != fm.config.EncryptionKey
+	pepperChanged := config.Pepper != fm.config.Pepper
+
+	if keyChanged || pepperChanged {
+		encryptor, err := NewEncryptor(config.EncryptionKey, config.Pepper)
+		if err != nil {
+			return fmt.Errorf("failed to create new encryptor: %w", err)
+		}
+		fm.encryptor = encryptor
+	}
+
+	fm.config = config
+	return nil
+}
+
+// VerifyPepper verifies that the current pepper matches the provided one
+func (fm *FileManager) VerifyPepper(pepper string) bool {
+	return fm.encryptor.VerifyPepper(pepper)
+}
+
+// RotatePepper updates the pepper (warning: existing encrypted files will need re-encryption)
+func (fm *FileManager) RotatePepper(newPepper string) error {
+	if err := fm.encryptor.UpdatePepper(newPepper); err != nil {
+		return fmt.Errorf("failed to update pepper: %w", err)
+	}
+
+	fm.config.Pepper = newPepper
+	return nil
+}
+
+// ReEncryptFile re-encrypts a file with the current salt+pepper configuration
+func (fm *FileManager) ReEncryptFile(path, filename string) error {
+	// Load with old encryption
+	sf, err := fm.LoadSecureFileFromDisk(path, filename)
+	if err != nil {
+		return fmt.Errorf("failed to load file for re-encryption: %w", err)
+	}
+
+	// Save with new encryption (new salt will be generated)
+	if err := sf.SaveEncrypted(); err != nil {
+		return fmt.Errorf("failed to re-encrypt file: %w", err)
+	}
+
+	return nil
+}
+
+// ReEncryptMultipleFiles re-encrypts multiple files with current salt+pepper configuration
+func (fm *FileManager) ReEncryptMultipleFiles(operations []FileOperation, maxConcurrency int) []FileOperation {
+	if maxConcurrency <= 0 {
+		maxConcurrency = 5
+	}
+
+	results := make([]FileOperation, len(operations))
+	copy(results, operations)
+
+	var wg sync.WaitGroup
+	semaphore := make(chan struct{}, maxConcurrency)
+
+	for i := range results {
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+			semaphore <- struct{}{}        // Acquire semaphore
+			defer func() { <-semaphore }() // Release semaphore
+
+			op := &results[index]
+			err := fm.ReEncryptFile(op.Path, op.Filename)
+			if err != nil {
+				op.Error = fmt.Errorf("failed to re-encrypt file %s: %w", op.Filename, err)
+			} else {
+				op.Error = nil
+			}
+		}(i)
+	}
+
+	wg.Wait()
+	return results
+}
+
+// CopyOperation represents a file copy operation
+type CopyOperation struct {
+	SourcePath     string
+	SourceFilename string
+	DestPath       string
+	DestFilename   string
+	Options        CopyOptions
+}
+
+// CopyResult represents the result of a file copy operation
+type CopyResult struct {
+	SourcePath     string
+	SourceFilename string
+	DestPath       string
+	DestFilename   string
+	Success        bool
+	Error          error
 }
