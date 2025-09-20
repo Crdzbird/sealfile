@@ -34,23 +34,18 @@ func NewFileManager(config *Config) (*FileManager, error) {
 	if config == nil {
 		config = DefaultConfig()
 	}
-
-	// Validate pepper is provided
 	if config.Pepper == "" {
 		return nil, fmt.Errorf("pepper is required for enhanced security")
 	}
-
 	encryptor, err := NewEncryptor(config.EncryptionKey, config.Pepper)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create encryptor: %w", err)
 	}
-
 	fm := &FileManager{
 		config:     config,
 		encryptor:  encryptor,
 		compressor: NewCompressor(),
 	}
-
 	return fm, nil
 }
 
@@ -82,28 +77,23 @@ func (fm *FileManager) CreateMultipleEncryptedFiles(operations []FileOperation, 
 	if maxConcurrency <= 0 {
 		maxConcurrency = 5
 	}
-
 	results := make([]FileOperation, len(operations))
 	copy(results, operations)
-
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, maxConcurrency)
-
 	for i := range results {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
-			semaphore <- struct{}{}        // Acquire semaphore
-			defer func() { <-semaphore }() // Release semaphore
-
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
 			op := &results[index]
 			sf := fm.NewSecureFile(op.Data, op.Path, op.Filename)
-
 			if err := sf.SaveEncrypted(); err != nil {
 				op.Error = fmt.Errorf("failed to encrypt and save file %s: %w", op.Filename, err)
-			} else {
-				op.Error = nil // Success
+				return
 			}
+			op.Error = nil
 		}(i)
 	}
 
@@ -116,74 +106,59 @@ func (fm *FileManager) DecryptMultipleFiles(operations []FileOperation, maxConcu
 	if maxConcurrency <= 0 {
 		maxConcurrency = 5
 	}
-
 	results := make([]FileOperation, len(operations))
 	copy(results, operations)
-
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, maxConcurrency)
-
 	for i := range results {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
-			semaphore <- struct{}{}        // Acquire semaphore
-			defer func() { <-semaphore }() // Release semaphore
-
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
 			op := &results[index]
 			sf, err := fm.LoadSecureFileFromDisk(op.Path, op.Filename)
 			if err != nil {
 				op.Error = fmt.Errorf("failed to decrypt file %s: %w", op.Filename, err)
-			} else {
-				op.Data = sf.Data
-				op.Error = nil
+				return
 			}
+			op.Data = sf.Data
+			op.Error = nil
 		}(i)
 	}
-
 	wg.Wait()
 	return results
 }
 
 // CopyFileToNewLocation copies a file to a new location with optional decryption
 func (fm *FileManager) CopyFileToNewLocation(sourcePath, sourceFilename, destPath, destFilename string, options CopyOptions) error {
-	// Ensure destination directory exists if requested
 	if options.CreateDirectories {
 		if err := EnsureDirectory(destPath); err != nil {
 			return fmt.Errorf("failed to create destination directory: %w", err)
 		}
 	}
-
 	destFullPath := filepath.Join(destPath, destFilename)
-
-	// Check if destination exists and handle overwrite option
 	if !options.OverwriteExisting {
 		if _, err := os.Stat(destFullPath); err == nil {
 			return fmt.Errorf("destination file already exists: %s", destFullPath)
 		}
 	}
-
 	if options.DecryptBeforeCopy {
 		return fm.copyWithDecryption(sourcePath, sourceFilename, destPath, destFilename)
 	}
-
 	return fm.copyEncryptedFile(sourcePath, sourceFilename, destPath, destFilename)
 }
 
 // copyWithDecryption decrypts the file and saves the unencrypted version
 func (fm *FileManager) copyWithDecryption(sourcePath, sourceFilename, destPath, destFilename string) error {
-	// Load and decrypt source file
 	sourceFile, err := fm.LoadSecureFileFromDisk(sourcePath, sourceFilename)
 	if err != nil {
 		return fmt.Errorf("failed to load source file: %w", err)
 	}
-
-	// Write unencrypted data to destination
 	destFullPath := filepath.Join(destPath, destFilename)
 	if err := os.WriteFile(destFullPath, sourceFile.Data, 0644); err != nil {
 		return fmt.Errorf("failed to write unencrypted file: %w", err)
 	}
-
 	return nil
 }
 
@@ -191,14 +166,10 @@ func (fm *FileManager) copyWithDecryption(sourcePath, sourceFilename, destPath, 
 func (fm *FileManager) copyEncryptedFile(sourcePath, sourceFilename, destPath, destFilename string) error {
 	sourceFullPath := filepath.Join(sourcePath, sourceFilename)
 	destFullPath := filepath.Join(destPath, destFilename)
-
-	// Read source file (encrypted)
 	data, err := os.ReadFile(sourceFullPath)
 	if err != nil {
 		return fmt.Errorf("failed to read source file: %w", err)
 	}
-
-	// Write to destination (still encrypted)
 	if err := os.WriteFile(destFullPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write encrypted file: %w", err)
 	}
@@ -211,19 +182,15 @@ func (fm *FileManager) BatchCopyFiles(copyOperations []CopyOperation, maxConcurr
 	if maxConcurrency <= 0 {
 		maxConcurrency = 5
 	}
-
 	results := make([]CopyResult, len(copyOperations))
-
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, maxConcurrency)
-
 	for i, op := range copyOperations {
 		wg.Add(1)
 		go func(index int, operation CopyOperation) {
 			defer wg.Done()
-			semaphore <- struct{}{}        // Acquire semaphore
-			defer func() { <-semaphore }() // Release semaphore
-
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
 			err := fm.CopyFileToNewLocation(
 				operation.SourcePath,
 				operation.SourceFilename,
@@ -231,7 +198,6 @@ func (fm *FileManager) BatchCopyFiles(copyOperations []CopyOperation, maxConcurr
 				operation.DestFilename,
 				operation.Options,
 			)
-
 			results[index] = CopyResult{
 				SourcePath:     operation.SourcePath,
 				SourceFilename: operation.SourceFilename,
@@ -242,7 +208,6 @@ func (fm *FileManager) BatchCopyFiles(copyOperations []CopyOperation, maxConcurr
 			}
 		}(i, op)
 	}
-
 	wg.Wait()
 	return results
 }
@@ -254,15 +219,11 @@ func (fm *FileManager) GetConfig() *Config {
 
 // UpdateConfig updates the configuration (creates new encryptor if key/pepper changed)
 func (fm *FileManager) UpdateConfig(config *Config) error {
-	// Validate pepper is provided
 	if config.Pepper == "" {
 		return fmt.Errorf("pepper is required for enhanced security")
 	}
-
-	// Check if we need to create a new encryptor
 	keyChanged := config.EncryptionKey != fm.config.EncryptionKey
 	pepperChanged := config.Pepper != fm.config.Pepper
-
 	if keyChanged || pepperChanged {
 		encryptor, err := NewEncryptor(config.EncryptionKey, config.Pepper)
 		if err != nil {
@@ -270,7 +231,6 @@ func (fm *FileManager) UpdateConfig(config *Config) error {
 		}
 		fm.encryptor = encryptor
 	}
-
 	fm.config = config
 	return nil
 }
@@ -285,24 +245,19 @@ func (fm *FileManager) RotatePepper(newPepper string) error {
 	if err := fm.encryptor.UpdatePepper(newPepper); err != nil {
 		return fmt.Errorf("failed to update pepper: %w", err)
 	}
-
 	fm.config.Pepper = newPepper
 	return nil
 }
 
 // ReEncryptFile re-encrypts a file with the current salt+pepper configuration
 func (fm *FileManager) ReEncryptFile(path, filename string) error {
-	// Load with old encryption
 	sf, err := fm.LoadSecureFileFromDisk(path, filename)
 	if err != nil {
 		return fmt.Errorf("failed to load file for re-encryption: %w", err)
 	}
-
-	// Save with new encryption (new salt will be generated)
 	if err := sf.SaveEncrypted(); err != nil {
 		return fmt.Errorf("failed to re-encrypt file: %w", err)
 	}
-
 	return nil
 }
 
@@ -311,30 +266,25 @@ func (fm *FileManager) ReEncryptMultipleFiles(operations []FileOperation, maxCon
 	if maxConcurrency <= 0 {
 		maxConcurrency = 5
 	}
-
 	results := make([]FileOperation, len(operations))
 	copy(results, operations)
-
 	var wg sync.WaitGroup
 	semaphore := make(chan struct{}, maxConcurrency)
-
 	for i := range results {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
-			semaphore <- struct{}{}        // Acquire semaphore
-			defer func() { <-semaphore }() // Release semaphore
-
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
 			op := &results[index]
 			err := fm.ReEncryptFile(op.Path, op.Filename)
 			if err != nil {
 				op.Error = fmt.Errorf("failed to re-encrypt file %s: %w", op.Filename, err)
-			} else {
-				op.Error = nil
+				return
 			}
+			op.Error = nil
 		}(i)
 	}
-
 	wg.Wait()
 	return results
 }

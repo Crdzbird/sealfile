@@ -25,11 +25,10 @@ func NewBatchProcessor(fm *FileManager, concurrency int) *BatchProcessor {
 func (bp *BatchProcessor) ProcessFiles(files []*SecureFile, processor func(*SecureFile) error) []error {
 	semaphore := make(chan struct{}, bp.concurrency)
 	errChan := make(chan error, len(files))
-
 	for _, file := range files {
 		go func(f *SecureFile) {
-			semaphore <- struct{}{}        // Acquire semaphore
-			defer func() { <-semaphore }() // Release semaphore
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
 			if err := processor(f); err != nil {
 				errChan <- fmt.Errorf("failed to process file %s: %w", f.Filename, err)
 				return
@@ -37,8 +36,6 @@ func (bp *BatchProcessor) ProcessFiles(files []*SecureFile, processor func(*Secu
 			errChan <- nil
 		}(file)
 	}
-
-	// Collect errors
 	errors := make([]error, len(files))
 	for i := 0; i < len(files); i++ {
 		errors[i] = <-errChan

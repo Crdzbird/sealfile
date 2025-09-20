@@ -19,15 +19,12 @@ func NewCompressor() *Compressor {
 func (c *Compressor) Compress(data []byte) ([]byte, error) {
 	var compressedData bytes.Buffer
 	gzw := gzip.NewWriter(&compressedData)
-
 	if _, err := gzw.Write(data); err != nil {
 		return nil, fmt.Errorf("failed to write data to gzip writer: %w", err)
 	}
-
 	if err := gzw.Close(); err != nil {
 		return nil, fmt.Errorf("failed to close gzip writer: %w", err)
 	}
-
 	return compressedData.Bytes(), nil
 }
 
@@ -47,6 +44,5 @@ func (c *Compressor) Decompress(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read decompressed data: %w", err)
 	}
-
 	return decompressed, nil
 }

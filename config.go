@@ -41,18 +41,34 @@ func DefaultConfig() *Config {
 	}
 }
 
+// GenerateRandomKey generates a cryptographically secure random key
+func GenerateRandomKey(length int, pattern string) (string, error) {
+	if length <= 0 {
+		length = 32
+	}
+	if pattern == "" {
+		pattern = "A-Za-z0-9!@#$%^&*()-_=+[]{}|;:,.ñ<>?/"
+	}
+	bytes := make([]byte, length)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", fmt.Errorf("failed to generate random key: %w", err)
+	}
+	key := make([]byte, length)
+	for i, b := range bytes {
+		key[i] = pattern[int(b)%len(pattern)]
+	}
+	return string(key), nil
+}
+
 // GenerateRandomPepper generates a cryptographically secure random pepper
 func GenerateRandomPepper(length int) (string, error) {
 	if length <= 0 {
 		length = 32
 	}
-
 	bytes := make([]byte, length)
 	if _, err := rand.Read(bytes); err != nil {
 		return "", fmt.Errorf("failed to generate random pepper: %w", err)
 	}
-
-	// Convert to hex string
 	pepper := fmt.Sprintf("%x", bytes)
 	return pepper, nil
 }
